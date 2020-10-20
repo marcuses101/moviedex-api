@@ -5,18 +5,28 @@ const helmet = require("helmet");
 const cors = require("cors");
 const app = express();
 const MOVIE_DATA = require("./movies-data.json");
+const morganSetting = process.env.NODE_ENV === "production" ? "tiny" : "common";
 
-app.use(morgan("dev"));
+app.use(morgan(morganSetting));
 app.use(helmet());
 app.use(cors());
 
 function handleAuthorization(req, res, next) {
-  if (req.headers.authorization.split(" ")[1] !== process.env.API_KEY)
+  if ((req.headers.authorization.split(" ")[1] !== process.env.API_KEY) || !req.headers.authorization)
     return res.status(401).send("invalid authorization");
   next();
 }
 
 app.use(handleAuthorization);
+app.use((error,req,res,next)=>{
+  let response = {}
+  if (process.env.NODE_ENV === 'production'){
+    response = {error: {message: 'server error'}}
+  } else {
+    response = {error}
+  }
+  res.status(500).json(response)
+})
 
 function handleMovieRoute(req, res) {
   const { genre = null, country = null, avg_vote = null } = req.query;
